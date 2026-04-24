@@ -23,9 +23,12 @@ function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | nu
       continue;
     }
 
+    // User expectation: partial refills should not contribute to efficiency metrics.
     let litresSinceAnchor = 0;
     for (let j = anchorFullIdx + 1; j <= i; j++) {
-      litresSinceAnchor += fillups[j].litres_added;
+      if (!fillups[j].is_partial) {
+        litresSinceAnchor += fillups[j].litres_added;
+      }
     }
 
     const anchor = fillups[anchorFullIdx];
@@ -40,6 +43,9 @@ function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | nu
       let tripSum = 0;
       let tripDataComplete = true;
       for (let j = anchorFullIdx + 1; j <= i; j++) {
+        if (fillups[j].is_partial) {
+          continue;
+        }
         const trip = fillups[j].trip_km;
         if (trip != null && trip > 0) {
           tripSum += trip;
@@ -236,6 +242,7 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
     if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
     const fillups = db.prepare('SELECT * FROM fillups WHERE vehicle_id = ? ORDER BY filled_at ASC').all(req.params['id']) as Fillup[];
+    const nonPartialFillups = fillups.filter(f => !f.is_partial);
 
     const total_fillups = fillups.length;
     const total_litres = fillups.reduce((sum, f) => sum + f.litres_added, 0);
@@ -248,10 +255,12 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
       ? validEfficiencies.reduce((a, b) => a + b, 0) / validEfficiencies.length
       : 0;
 
-    const avg_cost_per_km = total_km > 0 ? total_spent_zar / total_km : 0;
+    const total_spent_zar_non_partial = nonPartialFillups.reduce((sum, f) => sum + f.total_price, 0);
+    const total_km_non_partial = nonPartialFillups.reduce((sum, f) => sum + (f.trip_km ?? 0), 0);
+    const avg_cost_per_km = total_km_non_partial > 0 ? total_spent_zar_non_partial / total_km_non_partial : 0;
 
-    const avg_price_per_litre = total_fillups > 0
-      ? fillups.reduce((sum, f) => sum + f.price_per_litre, 0) / total_fillups
+    const avg_price_per_litre = nonPartialFillups.length > 0
+      ? nonPartialFillups.reduce((sum, f) => sum + f.price_per_litre, 0) / nonPartialFillups.length
       : 0;
 
     const odoFillups = fillups.filter(f => f.odometer != null);
@@ -300,9 +309,9 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
 
     let lowest_total_cost: number | null = null;
     let highest_total_cost: number | null = null;
-    if (fillups.length > 0) {
-      lowest_total_cost = fillups.reduce((a, b) => b.total_price < a.total_price ? b : a).total_price;
-      highest_total_cost = fillups.reduce((a, b) => b.total_price > a.total_price ? b : a).total_price;
+    if (nonPartialFillups.length > 0) {
+      lowest_total_cost = nonPartialFillups.reduce((a, b) => b.total_price < a.total_price ? b : a).total_price;
+      highest_total_cost = nonPartialFillups.reduce((a, b) => b.total_price > a.total_price ? b : a).total_price;
     }
 
     const stats: FillupStats = {

@@ -232,13 +232,24 @@ export class DashboardComponent implements OnInit {
       return `${d.getDate()}/${d.getMonth() + 1}`;
     });
 
-    const efficiencies = last10.map(f => f.computed_efficiency ?? null);
+    const efficiencyPoints = last10
+      .filter(f => !f.is_partial && f.computed_efficiency != null)
+      .map(f => {
+        const d = new Date(f.filled_at);
+        return {
+          label: `${d.getDate()}/${d.getMonth() + 1}`,
+          value: f.computed_efficiency as number,
+        };
+      });
+
+    const efficiencyLabels = efficiencyPoints.map(p => p.label);
+    const efficiencies = efficiencyPoints.map(p => p.value);
     const prices = last10.map(f => f.price_per_litre);
 
     this.efficiencyChartData = {
-      labels,
+      labels: efficiencyLabels,
       datasets: [{
-        data: efficiencies as number[],
+        data: efficiencies,
         borderColor: '#80cbc4',
         backgroundColor: 'rgba(128,203,196,0.1)',
         tension: 0.4,
