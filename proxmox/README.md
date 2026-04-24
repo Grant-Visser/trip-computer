@@ -26,7 +26,7 @@ The script will:
 Run this from the Proxmox host:
 
 ```bash
-pct exec <CTID> -- bash -c 'cd /opt/trip-computer && git pull && npm ci && cd backend && npm run build && cd ../frontend && npm run build && cp -r dist/frontend/browser/. /var/www/trip-computer/ && systemctl restart trip-computer'
+pct exec <CTID> -- bash -c 'cd /opt/trip-computer && git pull && npm ci --silent && npm run build --workspace=backend && npm run build --workspace=frontend && cp -r frontend/dist/frontend/browser/. /var/www/trip-computer/ && systemctl restart trip-computer'
 ```
 
 Or SSH into the container and run the same command directly.

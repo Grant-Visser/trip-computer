@@ -39,8 +39,11 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Init DB then start
 initDb();
 
-app.listen(PORT, () => {
-  console.log(`Trip Computer backend running on http://localhost:${PORT}`);
+// Bind to loopback only — Nginx (or a dev proxy) is the intended public entry point.
+// This prevents port 3000 from being directly reachable on the network.
+const HOST = process.env['HOST'] || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  console.log(`Trip Computer backend running on http://${HOST}:${PORT}`);
 });
 
 export default app;
