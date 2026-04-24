@@ -43,11 +43,31 @@ HOSTNAME="trip-computer"
 CORES=1
 MEMORY=512
 DISK=4
-BRIDGE="vmbr0"
-TEMPLATE_STORAGE="local"
-DISK_STORAGE="local-lvm"
-APP_PORT=80
 OS_VERSION=13
+
+# Auto-detect sensible storage defaults from what's actually available
+# Template storage: prefer 'local', fall back to first available
+TEMPLATE_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 && $1=="local" {print $1}' | head -1)
+[[ -z "$TEMPLATE_STORAGE" ]] && TEMPLATE_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | head -1)
+[[ -z "$TEMPLATE_STORAGE" ]] && TEMPLATE_STORAGE="local"
+
+# Disk storage: prefer storage that supports 'rootdir' content
+# pvesm status cols: name type status total used avail %
+# Use pvesm list to find rootdir-capable storage
+DISK_STORAGE=$(pvesm status --content rootdir 2>/dev/null | awk 'NR>1 {print $1}' | head -1)
+# Fallback: try common names in order
+if [[ -z "$DISK_STORAGE" ]]; then
+  for _s in local-lvm local-zfs local-btrfs local; do
+    if pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$_s"; then
+      DISK_STORAGE="$_s"; break
+    fi
+  done
+fi
+[[ -z "$DISK_STORAGE" ]] && DISK_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | tail -1)
+
+# Network bridge: prefer vmbr0, fall back to first available
+BRIDGE=$(ip link show 2>/dev/null | grep -oP '(?<=^\d+: )vmbr\w+' | head -1)
+[[ -z "$BRIDGE" ]] && BRIDGE="vmbr0"
 
 REPO_URL="https://github.com/Grant-Visser/trip-computer.git"
 INSTALL_URL="https://raw.githubusercontent.com/Grant-Visser/trip-computer/main/proxmox/trip-computer-install.sh"
