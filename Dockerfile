@@ -1,19 +1,31 @@
 # Stage 1 — Build frontend
 FROM node:22-trixie AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
+WORKDIR /app
+# Copy root workspace manifest + lock file so npm ci works
+COPY package.json package-lock.json ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 RUN npm ci
-COPY shared/ ../shared/
-COPY frontend/ ./
+# Now copy source
+COPY shared/ ./shared/
+COPY frontend/ ./frontend/
+WORKDIR /app/frontend
 RUN npm run build
 
 # Stage 2 — Build backend
 FROM node:22-trixie AS backend-builder
-WORKDIR /app/backend
-COPY backend/package*.json ./
+WORKDIR /app
+# Copy root workspace manifest + lock file so npm ci works
+COPY package.json package-lock.json ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 RUN npm ci
-COPY shared/ ../shared/
-COPY backend/ ./
+# Now copy source
+COPY shared/ ./shared/
+COPY backend/ ./backend/
+WORKDIR /app/backend
 RUN npm run build
 
 # Stage 3 — Production image
@@ -25,7 +37,7 @@ RUN apt-get update && apt-get install -y nginx supervisor && rm -rf /var/lib/apt
 # Backend
 WORKDIR /app/backend
 COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/node_modules ./node_modules
+COPY --from=backend-builder /app/node_modules ./node_modules
 COPY backend/package.json ./
 
 # Frontend static files
