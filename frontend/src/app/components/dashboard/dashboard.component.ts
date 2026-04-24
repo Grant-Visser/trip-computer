@@ -6,7 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { ApiService } from '../../services/api.service';
 import { VehicleStateService } from '../../services/vehicle-state.service';
@@ -15,7 +15,7 @@ import type { Vehicle, Fillup, FillupStats } from '@trip-computer/shared';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatSelectModule, MatCardModule, MatButtonModule, MatIconModule, NgChartsModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatSelectModule, MatCardModule, MatButtonModule, MatIconModule, BaseChartDirective],
   template: `
     <div class="page-container">
       <mat-form-field appearance="outline" class="vehicle-select">
