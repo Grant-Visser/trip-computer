@@ -1,8 +1,28 @@
 # Hosting Trip Computer on Proxmox LXC
 
-> **Note:** If you prefer Docker over a bare LXC, see the [Docker section in the main README](../README.md#-docker). The Docker setup is simpler and handles builds automatically.
+> **Docker alternative:** See the [Docker section in the main README](../README.md#-docker) if you prefer a container-based setup.
 
-This guide walks you through deploying Trip Computer on a lightweight Debian 12 LXC container in Proxmox.
+## ⚡ One-Command Install (Recommended)
+
+From your **Proxmox host shell**, run:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Grant-Visser/trip-computer/main/proxmox/trip-computer.sh)"
+```
+
+This follows the same pattern as [community-scripts/ProxmoxVE](https://github.com/community-scripts/ProxmoxVE):
+- Prompts for **Default** (sensible defaults) or **Advanced** (full control) setup
+- Creates a **Debian 13 LXC** with Node.js 22 LTS
+- Installs and configures the app, Nginx, and a systemd service automatically
+- Leaves you with a running app and a handy update function
+
+**To update later**, run the same command inside the container and choose **Update**.
+
+---
+
+## Manual Setup
+
+This guide walks you through deploying Trip Computer manually on a Debian 13 LXC container in Proxmox.
 
 ---
 
