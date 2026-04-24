@@ -233,7 +233,7 @@ export class DashboardComponent implements OnInit {
     });
 
     const efficiencyPoints = last10
-      .filter(f => !f.is_partial && f.computed_efficiency != null)
+      .filter(f => Number(f.is_partial ?? 0) !== 1 && Number.isFinite(f.computed_efficiency ?? null))
       .map(f => {
         const d = new Date(f.filled_at);
         return {

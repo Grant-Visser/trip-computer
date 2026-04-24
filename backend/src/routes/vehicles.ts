@@ -7,65 +7,38 @@ const router = Router();
 
 function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | null> {
   const effMap = new Map<number, number | null>();
-  let anchorFullIdx: number | null = null;
-
   for (let i = 0; i < fillups.length; i++) {
     const current = fillups[i];
+    const prev = i > 0 ? fillups[i - 1] : null;
 
-    if (current.is_partial) {
+    if (!prev) {
       effMap.set(current.id, null);
       continue;
     }
 
-    if (anchorFullIdx === null) {
+    // Consistent policy: any interval involving a partial fill does not get an efficiency value.
+    if (current.is_partial || prev.is_partial) {
       effMap.set(current.id, null);
-      anchorFullIdx = i;
       continue;
     }
 
-    // User expectation: partial refills should not contribute to efficiency metrics.
-    let litresSinceAnchor = 0;
-    for (let j = anchorFullIdx + 1; j <= i; j++) {
-      if (!fillups[j].is_partial) {
-        litresSinceAnchor += fillups[j].litres_added;
-      }
-    }
-
-    const anchor = fillups[anchorFullIdx];
+    const fuelUsedLitres = prev.litres_added;
     let distanceKm: number | null = null;
     if (
       current.odometer != null &&
-      anchor.odometer != null &&
-      current.odometer > anchor.odometer
+      prev.odometer != null &&
+      current.odometer > prev.odometer
     ) {
-      distanceKm = current.odometer - anchor.odometer;
-    } else {
-      let tripSum = 0;
-      let tripDataComplete = true;
-      for (let j = anchorFullIdx + 1; j <= i; j++) {
-        if (fillups[j].is_partial) {
-          continue;
-        }
-        const trip = fillups[j].trip_km;
-        if (trip != null && trip > 0) {
-          tripSum += trip;
-        } else {
-          tripDataComplete = false;
-          break;
-        }
-      }
-      if (tripDataComplete && tripSum > 0) {
-        distanceKm = tripSum;
-      }
+      distanceKm = current.odometer - prev.odometer;
+    } else if (current.trip_km != null && current.trip_km > 0) {
+      distanceKm = current.trip_km;
     }
 
-    if (distanceKm != null && distanceKm > 0) {
-      effMap.set(current.id, (litresSinceAnchor / distanceKm) * 100);
+    if (fuelUsedLitres > 0 && distanceKm != null && distanceKm > 0) {
+      effMap.set(current.id, (fuelUsedLitres / distanceKm) * 100);
     } else {
       effMap.set(current.id, null);
     }
-
-    anchorFullIdx = i;
   }
 
   return effMap;
