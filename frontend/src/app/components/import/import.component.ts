@@ -19,6 +19,18 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
     <div class="page-container">
       <h2>Import Fill-ups</h2>
 
+      <div class="import-help">
+        <div class="help-title">How to import</div>
+        <ol>
+          <li>Select your vehicle.</li>
+          <li>Upload a CSV file or paste rows into the text box.</li>
+          <li>Click Preview, verify the rows, then click Import.</li>
+        </ol>
+        <div class="help-format">
+          Accepted CSV columns: <strong>date, litres, price_per_litre, total_price, trip_km, odometer</strong>
+        </div>
+      </div>
+
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Vehicle</mat-label>
         <mat-select [(ngModel)]="selectedVehicleId">
@@ -31,7 +43,7 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Paste fill-up data (one per line)</mat-label>
         <textarea matInput [(ngModel)]="pasteData" rows="8"
-          placeholder="2025/10/28 52.78 R21.63 R1141.65 570.4 32756&#10;2025/09/14 48.50 R21.30 R1033.05 520.1 32185"></textarea>
+          placeholder="date,litres,price_per_litre,total_price,trip_km,odometer&#10;2025-10-28,52.78,21.63,1141.65,570.4,32756&#10;2025/09/14 48.50 R21.30 R1033.05 520.1 32185"></textarea>
         <mat-hint>Format: date litres R price_per_litre R total_price trip_km odometer</mat-hint>
       </mat-form-field>
 
@@ -71,6 +83,28 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
   `,
   styles: [`
     h2 { color: #80cbc4; margin-bottom: 16px; }
+    .import-help {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+      color: #cfd8dc;
+      font-size: 13px;
+    }
+    .help-title {
+      color: #80cbc4;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .import-help ol {
+      margin: 0 0 8px 18px;
+      padding: 0;
+    }
+    .help-format {
+      color: #9e9e9e;
+      font-size: 12px;
+    }
     .preview-row {
       display: flex;
       gap: 12px;

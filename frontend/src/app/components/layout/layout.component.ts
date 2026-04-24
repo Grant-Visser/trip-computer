@@ -35,6 +35,10 @@ import { MatButtonModule } from '@angular/material/button';
         <mat-icon>directions_car</mat-icon>
         <span>Vehicles</span>
       </a>
+      <a routerLink="/import" routerLinkActive="active" class="nav-item">
+        <mat-icon>upload_file</mat-icon>
+        <span>Import</span>
+      </a>
     </nav>
   `,
   styles: [`
@@ -66,15 +70,15 @@ import { MatButtonModule } from '@angular/material/button';
       align-items: center;
       text-decoration: none;
       color: #757575;
-      font-size: 11px;
-      padding: 8px 16px;
+      font-size: 10px;
+      padding: 6px 10px;
       border-radius: 8px;
       transition: color 0.2s;
 
       mat-icon {
-        font-size: 24px;
-        height: 24px;
-        width: 24px;
+        font-size: 22px;
+        height: 22px;
+        width: 22px;
         margin-bottom: 2px;
       }
 

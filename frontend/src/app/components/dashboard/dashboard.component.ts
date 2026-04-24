@@ -7,10 +7,24 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartData } from 'chart.js';
+import {
+  CategoryScale,
+  Chart,
+  ChartConfiguration,
+  ChartData,
+  Filler,
+  Legend,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Tooltip,
+} from 'chart.js';
 import { ApiService } from '../../services/api.service';
 import { VehicleStateService } from '../../services/vehicle-state.service';
 import type { Vehicle, Fillup, FillupStats } from '@trip-computer/shared';
+
+Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Filler, Legend, Tooltip);
 
 @Component({
   selector: 'app-dashboard',
@@ -24,6 +38,17 @@ import type { Vehicle, Fillup, FillupStats } from '@trip-computer/shared';
           <mat-option *ngFor="let v of vehicles" [value]="v.id">{{ v.name }}</mat-option>
         </mat-select>
       </mat-form-field>
+
+      <div class="quick-actions" *ngIf="vehicles.length > 0">
+        <a mat-stroked-button routerLink="/fillup/new">
+          <mat-icon>local_gas_station</mat-icon>
+          Add Fill-up
+        </a>
+        <a mat-stroked-button routerLink="/import">
+          <mat-icon>upload_file</mat-icon>
+          Import CSV
+        </a>
+      </div>
 
       <ng-container *ngIf="stats">
         <div class="stats-grid">
@@ -132,6 +157,12 @@ import type { Vehicle, Fillup, FillupStats } from '@trip-computer/shared';
   `,
   styles: [`
     .vehicle-select { width: 100%; margin-bottom: 16px; }
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
     .last-fillup { text-align: left; }
     .last-fillup-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 15px; }
   `]
