@@ -43,47 +43,96 @@ HOSTNAME="trip-computer"
 CORES=1
 MEMORY=512
 DISK=4
-BRIDGE="vmbr0"
-TEMPLATE_STORAGE="local"
-DISK_STORAGE="local-lvm"
-APP_PORT=80
 OS_VERSION=13
+
+# Auto-detect sensible storage defaults from what's actually available
+# Template storage: prefer 'local', fall back to first available
+TEMPLATE_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 && $1=="local" {print $1}' | head -1)
+[[ -z "$TEMPLATE_STORAGE" ]] && TEMPLATE_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | head -1)
+[[ -z "$TEMPLATE_STORAGE" ]] && TEMPLATE_STORAGE="local"
+
+# Disk storage: prefer storage that supports 'rootdir' content
+# pvesm status cols: name type status total used avail %
+# Use pvesm list to find rootdir-capable storage
+DISK_STORAGE=$(pvesm status --content rootdir 2>/dev/null | awk 'NR>1 {print $1}' | head -1)
+# Fallback: try common names in order
+if [[ -z "$DISK_STORAGE" ]]; then
+  for _s in local-lvm local-zfs local-btrfs local; do
+    if pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$_s"; then
+      DISK_STORAGE="$_s"; break
+    fi
+  done
+fi
+[[ -z "$DISK_STORAGE" ]] && DISK_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | tail -1)
+
+# Network bridge: prefer vmbr0, fall back to first available
+BRIDGE=$(ip link show 2>/dev/null | awk -F': ' '/^[0-9]+: vmbr/{print $2}' | head -1)
+[[ -z "$BRIDGE" ]] && BRIDGE="vmbr0"
 
 REPO_URL="https://github.com/Grant-Visser/trip-computer.git"
 INSTALL_URL="https://raw.githubusercontent.com/Grant-Visser/trip-computer/main/proxmox/trip-computer-install.sh"
 
+# ── Storage picker helper ────────────────────────────────────────────────────
+# All display output goes to stderr; only the chosen pool name goes to stdout
+pick_storage() {
+  local prompt="$1" current="$2" filter="$3"
+  local -a pools
+  if [[ -n "$filter" ]]; then
+    mapfile -t pools < <(pvesm status --content "$filter" 2>/dev/null | awk 'NR>1 {print $1}')
+  else
+    mapfile -t pools < <(pvesm status 2>/dev/null | awk 'NR>1 {print $1}')
+  fi
+  if [[ ${#pools[@]} -eq 0 ]]; then
+    echo "$current"; return
+  fi
+  echo -e "  ${BOLD}${prompt}${CL}" >&2
+  for i in "${!pools[@]}"; do
+    local mark=""
+    [[ "${pools[$i]}" == "$current" ]] && mark=" ${GN}(suggested)${CL}"
+    echo -e "  ${GN}$((i+1)))${CL} ${pools[$i]}${mark}" >&2
+  done
+  local default_idx=1
+  for i in "${!pools[@]}"; do
+    [[ "${pools[$i]}" == "$current" ]] && default_idx=$((i+1)) && break
+  done
+  read -rp "  Select [$default_idx]: " sel </dev/tty
+  sel="${sel:-$default_idx}"
+  if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#pools[@]} )); then
+    echo "${pools[$((sel-1))]}"
+  else
+    echo "$current"
+  fi
+}
+
 # ── Mode select ───────────────────────────────────────────────────────────────
 echo -e "  ${BOLD}Setup mode:${CL}"
-echo -e "  ${GN}1)${CL} Default  — sensible defaults, minimal prompts"
+echo -e "  ${GN}1)${CL} Default  — prompts for storage only, everything else is automatic"
 echo -e "  ${GN}2)${CL} Advanced — configure everything"
 echo ""
 read -rp "  Select [1]: " MODE_SEL
 MODE_SEL="${MODE_SEL:-1}"
+echo ""
 
 if [[ "$MODE_SEL" == "2" ]]; then
-  echo ""
   echo -e "  ${BOLD}Advanced Configuration${CL}"
   echo -e "  ${DIM}Press Enter to accept the value in brackets${CL}\n"
-
-  read -rp "  Container ID [$CTID]: "           v; CTID="${v:-$CTID}"
-  read -rp "  Hostname [$HOSTNAME]: "           v; HOSTNAME="${v:-$HOSTNAME}"
-  read -rp "  CPU cores [$CORES]: "             v; CORES="${v:-$CORES}"
-  read -rp "  Memory MB [$MEMORY]: "            v; MEMORY="${v:-$MEMORY}"
-  read -rp "  Disk GB [$DISK]: "                v; DISK="${v:-$DISK}"
-
+  read -rp "  Container ID [$CTID]: "   v; CTID="${v:-$CTID}"
+  read -rp "  Hostname [$HOSTNAME]: "   v; HOSTNAME="${v:-$HOSTNAME}"
+  read -rp "  CPU cores [$CORES]: "     v; CORES="${v:-$CORES}"
+  read -rp "  Memory MB [$MEMORY]: "    v; MEMORY="${v:-$MEMORY}"
+  read -rp "  Disk GB [$DISK]: "        v; DISK="${v:-$DISK}"
   echo ""
   echo -e "  ${DIM}Available bridges:${CL}"
-  ip link show 2>/dev/null | grep -oP '(?<=^\d+: )vmbr\w+' | sed 's/^/    /' || true
-
-  read -rp "  Network bridge [$BRIDGE]: "       v; BRIDGE="${v:-$BRIDGE}"
-
+  ip link show 2>/dev/null | awk -F': ' '/^[0-9]+: vmbr/{print "    " $2}' || true
+  read -rp "  Network bridge [$BRIDGE]: " v; BRIDGE="${v:-$BRIDGE}"
   echo ""
-  echo -e "  ${DIM}Available storage:${CL}"
-  pvesm status 2>/dev/null | awk 'NR>1 {printf "    %-20s type=%-12s avail=%s\n", $1, $2, $5}' || true
-
-  read -rp "  Template storage [$TEMPLATE_STORAGE]: "  v; TEMPLATE_STORAGE="${v:-$TEMPLATE_STORAGE}"
-  read -rp "  Disk storage [$DISK_STORAGE]: "          v; DISK_STORAGE="${v:-$DISK_STORAGE}"
 fi
+
+# Always prompt for storage (both modes)
+TEMPLATE_STORAGE=$(pick_storage "Template storage (where to download the CT template):" "$TEMPLATE_STORAGE" "vztmpl")
+echo ""
+DISK_STORAGE=$(pick_storage "Disk storage (where to create the container disk):" "$DISK_STORAGE" "rootdir")
+echo ""
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
