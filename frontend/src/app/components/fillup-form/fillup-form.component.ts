@@ -36,28 +36,28 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
 
         <mat-form-field appearance="outline">
           <mat-label>Litres Added</mat-label>
-          <input matInput formControlName="litres_added" type="number" step="0.01" min="0" required>
+          <input matInput formControlName="litres_added" type="number" step="0.01" min="0" required (input)="onFuelInputsChanged()">
           <mat-hint>e.g. 52.78</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Price per Litre (R)</mat-label>
-          <input matInput formControlName="price_per_litre" type="number" step="0.01" min="0" required (input)="calcTotal()">
+          <input matInput formControlName="price_per_litre" type="number" step="0.01" min="0" required (input)="onFuelInputsChanged()">
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Total Price (R)</mat-label>
-          <input matInput formControlName="total_price" type="number" step="0.01" min="0" required>
+          <input matInput formControlName="total_price" type="number" step="0.01" min="0" required (input)="onTotalPriceManualEdit()">
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Trip km (since last fill-up)</mat-label>
-          <input matInput formControlName="trip_km" type="number" step="0.1" min="0">
+          <input matInput formControlName="trip_km" type="number" step="0.1" min="0" (input)="onTripKmChanged()">
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Odometer (km)</mat-label>
-          <input matInput formControlName="odometer" type="number" step="0.1" min="0">
+          <input matInput formControlName="odometer" type="number" step="0.1" min="0" (input)="onOdometerManualEdit()">
         </mat-form-field>
 
         <div *ngIf="efficiencyPreview" class="efficiency-preview">
@@ -113,6 +113,9 @@ export class FillupFormComponent implements OnInit {
   saving = false;
   geoLoading = false;
   efficiencyPreview: number | null = null;
+  previousOdometer: number | null = null;
+  autoTotalEnabled = true;
+  autoOdometerEnabled = true;
 
   constructor(
     private fb: FormBuilder,
@@ -145,9 +148,11 @@ export class FillupFormComponent implements OnInit {
         if (storedId && v.some(vehicle => vehicle.id === storedId)) {
           this.form.patchValue({ vehicle_id: storedId });
           this.vehicleState.setSelectedVehicle(v.find(vehicle => vehicle.id === storedId) ?? null);
+          this.loadPreviousOdometer(storedId);
         } else if (v.length > 0) {
           this.form.patchValue({ vehicle_id: v[0].id });
           this.vehicleState.setSelectedVehicle(v[0]);
+          this.loadPreviousOdometer(v[0].id);
         }
       });
     });
@@ -156,6 +161,8 @@ export class FillupFormComponent implements OnInit {
     if (idParam) {
       this.isEdit = true;
       this.editId = parseInt(idParam);
+      this.autoTotalEnabled = false;
+      this.autoOdometerEnabled = false;
       this.api.getFillup(this.editId).subscribe(f => this.patchForm(f));
     } else {
       this.getLocation();
@@ -165,15 +172,39 @@ export class FillupFormComponent implements OnInit {
     this.form.get('vehicle_id')?.valueChanges.subscribe((vehicleId: number | null) => {
       const selected = this.vehicles.find(v => v.id === vehicleId) ?? null;
       this.vehicleState.setSelectedVehicle(selected);
+      if (vehicleId) {
+        this.loadPreviousOdometer(vehicleId);
+      } else {
+        this.previousOdometer = null;
+      }
     });
   }
 
-  calcTotal(): void {
+  onFuelInputsChanged(): void {
+    if (!this.autoTotalEnabled) return;
+
     const litres = this.form.value.litres_added;
     const ppl = this.form.value.price_per_litre;
-    if (litres && ppl) {
+    if (litres != null && litres !== '' && ppl != null && ppl !== '') {
       this.form.patchValue({ total_price: +(litres * ppl).toFixed(2) }, { emitEvent: false });
     }
+  }
+
+  onTotalPriceManualEdit(): void {
+    this.autoTotalEnabled = false;
+  }
+
+  onTripKmChanged(): void {
+    if (!this.autoOdometerEnabled || this.previousOdometer == null) return;
+
+    const tripKm = this.form.value.trip_km;
+    if (tripKm != null && tripKm !== '' && tripKm >= 0) {
+      this.form.patchValue({ odometer: +(this.previousOdometer + Number(tripKm)).toFixed(1) }, { emitEvent: false });
+    }
+  }
+
+  onOdometerManualEdit(): void {
+    this.autoOdometerEnabled = false;
   }
 
   updateEfficiencyPreview(): void {
@@ -242,6 +273,14 @@ export class FillupFormComponent implements OnInit {
         this.snackBar.open('Failed to save fill-up', 'OK', { duration: 3000 });
         this.saving = false;
       },
+    });
+  }
+
+  private loadPreviousOdometer(vehicleId: number): void {
+    this.api.getFillups(vehicleId).subscribe(fillups => {
+      const latestWithOdo = fillups.find(f => f.odometer != null);
+      this.previousOdometer = latestWithOdo?.odometer ?? null;
+      this.onTripKmChanged();
     });
   }
 
