@@ -55,6 +55,39 @@ cd frontend && npm start
 
 Frontend runs at http://localhost:4200
 
+## 🐳 Docker
+
+The easiest way to run Trip Computer in production.
+
+### Quick start
+
+```bash
+docker compose up -d
+```
+
+App will be available at http://localhost:8080
+
+### What it does
+- Multi-stage build: compiles Angular frontend + TypeScript backend
+- Single container: Nginx serves the frontend and proxies `/api/` to the Node backend
+- SQLite database persisted in a named Docker volume (`trip-computer-data`)
+
+### Environment variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Backend port (internal) |
+| `DB_PATH` | `/data/trip-computer.db` | SQLite database path |
+| `NODE_ENV` | `production` | Node environment |
+
+### Updating
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Base image
+Built on `node:22-trixie` (Debian 13 "Trixie" with Node.js 22 LTS).
+
 ## Project Structure
 
 ```

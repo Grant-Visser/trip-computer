@@ -1,5 +1,7 @@
 # Hosting Trip Computer on Proxmox LXC
 
+> **Note:** If you prefer Docker over a bare LXC, see the [Docker section in the main README](../README.md#-docker). The Docker setup is simpler and handles builds automatically.
+
 This guide walks you through deploying Trip Computer on a lightweight Debian 12 LXC container in Proxmox.
 
 ---
