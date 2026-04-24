@@ -5,6 +5,66 @@ import type { Vehicle, CreateVehicleDto, Fillup, FillupStats, ImportFillupRow } 
 
 const router = Router();
 
+function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | null> {
+  const effMap = new Map<number, number | null>();
+  let anchorFullIdx: number | null = null;
+
+  for (let i = 0; i < fillups.length; i++) {
+    const current = fillups[i];
+
+    if (current.is_partial) {
+      effMap.set(current.id, null);
+      continue;
+    }
+
+    if (anchorFullIdx === null) {
+      effMap.set(current.id, null);
+      anchorFullIdx = i;
+      continue;
+    }
+
+    let litresSinceAnchor = 0;
+    for (let j = anchorFullIdx + 1; j <= i; j++) {
+      litresSinceAnchor += fillups[j].litres_added;
+    }
+
+    const anchor = fillups[anchorFullIdx];
+    let distanceKm: number | null = null;
+    if (
+      current.odometer != null &&
+      anchor.odometer != null &&
+      current.odometer > anchor.odometer
+    ) {
+      distanceKm = current.odometer - anchor.odometer;
+    } else {
+      let tripSum = 0;
+      let tripDataComplete = true;
+      for (let j = anchorFullIdx + 1; j <= i; j++) {
+        const trip = fillups[j].trip_km;
+        if (trip != null && trip > 0) {
+          tripSum += trip;
+        } else {
+          tripDataComplete = false;
+          break;
+        }
+      }
+      if (tripDataComplete && tripSum > 0) {
+        distanceKm = tripSum;
+      }
+    }
+
+    if (distanceKm != null && distanceKm > 0) {
+      effMap.set(current.id, (litresSinceAnchor / distanceKm) * 100);
+    } else {
+      effMap.set(current.id, null);
+    }
+
+    anchorFullIdx = i;
+  }
+
+  return effMap;
+}
+
 // GET /api/vehicles
 router.get('/', (_req: Request, res: Response) => {
   try {
@@ -135,6 +195,7 @@ router.post(
     body('total_price').isFloat({ min: 0 }),
     body('trip_km').optional().isFloat({ min: 0 }),
     body('odometer').optional().isFloat({ min: 0 }),
+    body('is_partial').optional().isBoolean(),
   ],
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -148,13 +209,13 @@ router.post(
       const dto = req.body;
       const now = new Date().toISOString().replace('Z', '+00:00');
       const stmt = db.prepare(`
-        INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, location_name, latitude, longitude, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, location_name, latitude, longitude, notes, is_partial, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         req.params['id'], dto.filled_at, dto.litres_added, dto.price_per_litre, dto.total_price,
         dto.trip_km ?? null, dto.odometer ?? null, dto.location_name ?? null,
-        dto.latitude ?? null, dto.longitude ?? null, dto.notes ?? null, now
+        dto.latitude ?? null, dto.longitude ?? null, dto.notes ?? null, dto.is_partial ? 1 : 0, now
       );
       const fillup = db.prepare('SELECT * FROM fillups WHERE id = ?').get(result.lastInsertRowid) as Fillup;
       res.status(201).json(fillup);
@@ -180,16 +241,14 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
     const total_litres = fillups.reduce((sum, f) => sum + f.litres_added, 0);
     const total_spent_zar = fillups.reduce((sum, f) => sum + f.total_price, 0);
     const total_km = fillups.reduce((sum, f) => sum + (f.trip_km ?? 0), 0);
+    const effMap = computeTankMethodEfficiency(fillups);
 
-    const fillupsWithEfficiency = fillups.filter(f => f.trip_km && f.trip_km > 0);
-    const avg_efficiency_l_per_100km = fillupsWithEfficiency.length > 0
-      ? fillupsWithEfficiency.reduce((sum, f) => sum + (f.litres_added / f.trip_km!) * 100, 0) / fillupsWithEfficiency.length
+    const validEfficiencies = Array.from(effMap.values()).filter((v): v is number => v !== null);
+    const avg_efficiency_l_per_100km = validEfficiencies.length > 0
+      ? validEfficiencies.reduce((a, b) => a + b, 0) / validEfficiencies.length
       : 0;
 
-    const fillupsWithBothKmAndCost = fillups.filter(f => f.trip_km && f.trip_km > 0);
-    const avg_cost_per_km = fillupsWithBothKmAndCost.length > 0
-      ? fillupsWithBothKmAndCost.reduce((sum, f) => sum + f.total_price / f.trip_km!, 0) / fillupsWithBothKmAndCost.length
-      : 0;
+    const avg_cost_per_km = total_km > 0 ? total_spent_zar / total_km : 0;
 
     const avg_price_per_litre = total_fillups > 0
       ? fillups.reduce((sum, f) => sum + f.price_per_litre, 0) / total_fillups
@@ -198,15 +257,18 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
     const odoFillups = fillups.filter(f => f.odometer != null);
     const last_odometer = odoFillups.length > 0 ? odoFillups[odoFillups.length - 1].odometer! : 0;
 
-    const recent_fillups = [...fillups].reverse().slice(0, 5);
+    const recent_fillups = [...fillups].reverse().slice(0, 10).map(f => ({
+      ...f,
+      computed_efficiency: effMap.get(f.id) ?? null,
+    }));
 
     // Compute records
-    const effFillups = fillups.filter(f => f.trip_km && f.trip_km > 0);
+    const fullFillupsWithEff = fillups.filter(f => !f.is_partial && effMap.get(f.id) != null);
     let best_efficiency_l_per_100km: number | null = null;
     let worst_efficiency_l_per_100km: number | null = null;
     let best_efficiency_date: string | null = null;
-    if (effFillups.length > 0) {
-      const effWithVal = effFillups.map(f => ({ val: (f.litres_added / f.trip_km!) * 100, date: f.filled_at }));
+    if (fullFillupsWithEff.length > 0) {
+      const effWithVal = fullFillupsWithEff.map(f => ({ val: effMap.get(f.id)!, date: f.filled_at }));
       const bestEff = effWithVal.reduce((a, b) => b.val < a.val ? b : a);
       const worstEff = effWithVal.reduce((a, b) => b.val > a.val ? b : a);
       best_efficiency_l_per_100km = bestEff.val;
@@ -289,8 +351,8 @@ router.post('/:id/import', param('id').isInt(), (req: Request, res: Response) =>
     }
 
     const stmt = db.prepare(`
-      INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, is_partial, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const now = new Date().toISOString().replace('Z', '+00:00');
@@ -299,7 +361,7 @@ router.post('/:id/import', param('id').isInt(), (req: Request, res: Response) =>
         // Normalise date: YYYY/MM/DD or YYYY-MM-DD → ISO8601 with +02:00
         const dateStr = row.date.replace(/\//g, '-');
         const filled_at = `${dateStr}T00:00:00+02:00`;
-        stmt.run(req.params['id'], filled_at, row.litres, row.price_per_litre, row.total_price, row.trip_km ?? null, row.odometer ?? null, now);
+        stmt.run(req.params['id'], filled_at, row.litres, row.price_per_litre, row.total_price, row.trip_km ?? null, row.odometer ?? null, row.is_partial ? 1 : 0, now);
       }
     });
 

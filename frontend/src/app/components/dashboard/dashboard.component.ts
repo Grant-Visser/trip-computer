@@ -232,9 +232,7 @@ export class DashboardComponent implements OnInit {
       return `${d.getDate()}/${d.getMonth() + 1}`;
     });
 
-    const efficiencies = last10.map(f =>
-      f.trip_km && f.trip_km > 0 ? (f.litres_added / f.trip_km) * 100 : null
-    );
+    const efficiencies = last10.map(f => f.computed_efficiency ?? null);
     const prices = last10.map(f => f.price_per_litre);
 
     this.efficiencyChartData = {

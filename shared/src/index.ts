@@ -22,7 +22,10 @@ export interface Fillup {
   latitude?: number | null;
   longitude?: number | null;
   notes?: string | null;
+  is_partial?: number | null; // 0 = full tank, 1 = partial fill
   created_at: string; // ISO8601 with timezone offset
+  // Computed server-side in stats context only
+  computed_efficiency?: number | null; // Tank-method L/100km
 }
 
 export interface FillupStats {
@@ -73,6 +76,7 @@ export interface CreateFillupDto {
   latitude?: number;
   longitude?: number;
   notes?: string;
+  is_partial?: boolean;
 }
 
 export interface ImportFillupRow {
@@ -82,6 +86,7 @@ export interface ImportFillupRow {
   total_price: number;
   trip_km?: number;
   odometer?: number;
+  is_partial?: boolean;
 }
 
 export interface ImportPreviewResponse {

@@ -21,7 +21,9 @@ export interface Fillup {
     latitude?: number | null;
     longitude?: number | null;
     notes?: string | null;
+    is_partial?: number | null;
     created_at: string;
+    computed_efficiency?: number | null;
 }
 export interface FillupStats {
     vehicle_id: number;
@@ -65,6 +67,7 @@ export interface CreateFillupDto {
     latitude?: number;
     longitude?: number;
     notes?: string;
+    is_partial?: boolean;
 }
 export interface ImportFillupRow {
     date: string;
@@ -73,6 +76,7 @@ export interface ImportFillupRow {
     total_price: number;
     trip_km?: number;
     odometer?: number;
+    is_partial?: boolean;
 }
 export interface ImportPreviewResponse {
     rows: ImportFillupRow[];

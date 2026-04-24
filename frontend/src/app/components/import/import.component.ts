@@ -67,6 +67,7 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
           <span>R{{ row.price_per_litre }}</span>
           <span>R{{ row.total_price }}</span>
           <span *ngIf="row.trip_km">{{ row.trip_km }} km</span>
+          <span *ngIf="row.is_partial" class="partial-flag">PARTIAL</span>
         </div>
 
         <div *ngIf="parseErrors.length > 0" class="error-list">
@@ -114,6 +115,15 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
       margin-bottom: 4px;
       font-size: 13px;
       color: #e0e0e0;
+    }
+    .partial-flag {
+      margin-left: auto;
+      color: #ffcc80;
+      font-size: 11px;
+      border: 1px solid #6d4c41;
+      border-radius: 999px;
+      padding: 2px 6px;
+      background: #3a2a1a;
     }
     .error-list { margin-top: 8px; }
     .error-row { color: #ef9a9a; font-size: 12px; padding: 4px 0; }
@@ -171,14 +181,21 @@ export class ImportComponent implements OnInit {
     this.preview = [];
     this.parseErrors = [];
     const lines = this.pasteData.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    let isPartialColIndex = -1;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      // Skip CSV header
-      if (i === 0 && line.toLowerCase().startsWith('date')) continue;
+      if (i === 0) {
+        const headerCells = line.split(',').map(c => c.trim().toLowerCase());
+        const hasDateHeader = headerCells.includes('date') || line.toLowerCase().startsWith('date');
+        if (hasDateHeader) {
+          isPartialColIndex = headerCells.findIndex(c => c === 'is_partial' || c === 'partial');
+          continue;
+        }
+      }
 
       try {
-        const row = this.parseLine(line);
+        const row = this.parseLine(line, isPartialColIndex);
         if (row) this.preview.push(row);
       } catch (e) {
         this.parseErrors.push(`Line ${i + 1}: ${(e as Error).message}`);
@@ -186,10 +203,14 @@ export class ImportComponent implements OnInit {
     }
   }
 
-  private parseLine(line: string): ImportFillupRow | null {
+  private parseLine(line: string, isPartialColIndex: number): ImportFillupRow | null {
     // Try CSV format first: date,litres,price_per_litre,total_price,trip_km,odometer
     const csvParts = line.split(',');
     if (csvParts.length >= 4) {
+      const parsedPartial = isPartialColIndex >= 0
+        ? this.parsePartialValue(csvParts[isPartialColIndex])
+        : this.parsePartialValue(csvParts[6]);
+
       return {
         date: csvParts[0].trim(),
         litres: parseFloat(csvParts[1]),
@@ -197,6 +218,7 @@ export class ImportComponent implements OnInit {
         total_price: parseFloat(csvParts[3]),
         trip_km: csvParts[4] ? parseFloat(csvParts[4]) : undefined,
         odometer: csvParts[5] ? parseFloat(csvParts[5]) : undefined,
+        is_partial: parsedPartial,
       };
     }
 
@@ -213,7 +235,21 @@ export class ImportComponent implements OnInit {
       total_price: stripR(parts[3]),
       trip_km: parts[4] ? parseFloat(parts[4]) : undefined,
       odometer: parts[5] ? parseFloat(parts[5]) : undefined,
+      is_partial: this.parsePartialValue(parts[6]),
     };
+  }
+
+  private parsePartialValue(value: string | undefined): boolean | undefined {
+    if (value == null) return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'y') {
+      return true;
+    }
+    if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'n') {
+      return false;
+    }
+    return undefined;
   }
 
   importData(): void {

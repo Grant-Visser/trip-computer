@@ -42,12 +42,16 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
         <div *ngFor="let f of sortedFillups" class="fillup-row">
           <div class="fillup-main">
             <div class="fillup-date">{{ f.filled_at | date:'dd MMM yyyy' }}</div>
-            <div class="fillup-litres">{{ f.litres_added | number:'1.2-2' }} L</div>
+            <div class="fillup-litres">
+              {{ f.litres_added | number:'1.2-2' }} L
+              <span *ngIf="f.is_partial" class="partial-tag">PARTIAL</span>
+            </div>
           </div>
           <div class="fillup-secondary">
             <span>R{{ f.total_price | number:'1.2-2' }}</span>
             <span *ngIf="f.trip_km"> · {{ f.trip_km | number:'1.0-0' }} km</span>
-            <span *ngIf="f.trip_km"> · {{ (f.litres_added / f.trip_km * 100) | number:'1.1-1' }} L/100km</span>
+            <span *ngIf="f.computed_efficiency !== null && f.computed_efficiency !== undefined"> · {{ f.computed_efficiency | number:'1.1-1' }} L/100km</span>
+            <span *ngIf="(f.computed_efficiency === null || f.computed_efficiency === undefined) && f.trip_km && !f.is_partial"> · {{ (f.litres_added / f.trip_km * 100) | number:'1.1-1' }} L/100km</span>
           </div>
           <div *ngIf="f.location_name" class="fillup-location">📍 {{ f.location_name }}</div>
           <div class="fillup-actions">
@@ -79,6 +83,16 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
     .fillup-main { display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; }
     .fillup-date { color: #e0e0e0; }
     .fillup-litres { color: #80cbc4; }
+    .partial-tag {
+      margin-left: 8px;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #3a2a1a;
+      color: #ffcc80;
+      border: 1px solid #6d4c41;
+      vertical-align: middle;
+    }
     .fillup-secondary { font-size: 13px; color: #9e9e9e; margin-top: 4px; }
     .fillup-location { font-size: 12px; color: #757575; margin-top: 4px; }
     .fillup-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
@@ -150,6 +164,7 @@ export class HistoryComponent implements OnInit {
       'total_price',
       'trip_km',
       'odometer',
+      'is_partial',
       'location_name',
       'notes',
     ];
@@ -172,6 +187,7 @@ export class HistoryComponent implements OnInit {
         f.total_price,
         f.trip_km ?? '',
         f.odometer ?? '',
+        f.is_partial ? '1' : '0',
         f.location_name ?? '',
         f.notes ?? '',
       ].map(escapeCsv).join(',');

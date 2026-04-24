@@ -30,6 +30,7 @@ router.put(
     body('total_price').optional().isFloat({ min: 0 }),
     body('trip_km').optional().isFloat({ min: 0 }),
     body('odometer').optional().isFloat({ min: 0 }),
+    body('is_partial').optional().isBoolean(),
   ],
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -43,11 +44,19 @@ router.put(
       const dto = req.body;
       const updated = { ...existing, ...dto };
       db.prepare(`
-        UPDATE fillups SET filled_at=?, litres_added=?, price_per_litre=?, total_price=?, trip_km=?, odometer=?, location_name=?, latitude=?, longitude=?, notes=? WHERE id=?
+        UPDATE fillups SET filled_at=?, litres_added=?, price_per_litre=?, total_price=?, trip_km=?, odometer=?, location_name=?, latitude=?, longitude=?, notes=?, is_partial=? WHERE id=?
       `).run(
-        updated.filled_at, updated.litres_added, updated.price_per_litre, updated.total_price,
-        updated.trip_km ?? null, updated.odometer ?? null, updated.location_name ?? null,
-        updated.latitude ?? null, updated.longitude ?? null, updated.notes ?? null,
+        updated.filled_at,
+        updated.litres_added,
+        updated.price_per_litre,
+        updated.total_price,
+        updated.trip_km ?? null,
+        updated.odometer ?? null,
+        updated.location_name ?? null,
+        updated.latitude ?? null,
+        updated.longitude ?? null,
+        updated.notes ?? null,
+        updated.is_partial ? 1 : 0,
         req.params['id']
       );
 

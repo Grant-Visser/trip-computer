@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../services/api.service';
 import { VehicleStateService } from '../../services/vehicle-state.service';
@@ -15,7 +16,7 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
 @Component({
   selector: 'app-fillup-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatIconModule, MatCheckboxModule, MatSnackBarModule],
   template: `
     <div class="page-container">
       <h2>{{ isEdit ? 'Edit Fill-up' : 'Add Fill-up' }}</h2>
@@ -77,6 +78,10 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
           <textarea matInput formControlName="notes" rows="2"></textarea>
         </mat-form-field>
 
+        <mat-checkbox formControlName="is_partial" class="partial-checkbox">
+          This is a partial refill
+        </mat-checkbox>
+
         <div class="form-actions">
           <button mat-stroked-button type="button" routerLink="/dashboard">Cancel</button>
           <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || saving">
@@ -89,6 +94,7 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
   styles: [`
     h2 { margin-bottom: 16px; color: #80cbc4; }
     .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; }
+    .partial-checkbox { margin-bottom: 12px; display: block; }
     .efficiency-preview {
       background: #1a1a2e;
       border-radius: 8px;
@@ -130,6 +136,7 @@ export class FillupFormComponent implements OnInit {
       latitude: [null],
       longitude: [null],
       notes: [''],
+      is_partial: [false],
     });
 
     this.api.getVehicles().subscribe(v => {
@@ -219,6 +226,7 @@ export class FillupFormComponent implements OnInit {
       latitude: v.latitude || undefined,
       longitude: v.longitude || undefined,
       notes: v.notes || undefined,
+      is_partial: !!v.is_partial,
     };
 
     const obs$ = this.isEdit && this.editId
@@ -250,6 +258,7 @@ export class FillupFormComponent implements OnInit {
       latitude: f.latitude,
       longitude: f.longitude,
       notes: f.notes,
+      is_partial: !!f.is_partial,
     });
   }
 

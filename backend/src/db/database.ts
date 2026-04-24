@@ -26,6 +26,7 @@ export function initDb(): void {
   db.pragma('foreign_keys = ON');
 
   createTables();
+  migrateDb();
   console.log(`Database initialized at ${resolvedPath}`);
 }
 
@@ -54,9 +55,11 @@ function createTables(): void {
       location_name TEXT,
       latitude REAL,
       longitude REAL,
-      notes TEXT,
+        notes TEXT,
+        is_partial INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
     );
+
 
     CREATE TABLE IF NOT EXISTS app_state (
       key TEXT PRIMARY KEY,
@@ -65,3 +68,10 @@ function createTables(): void {
     );
   `);
 }
+
+  function migrateDb(): void {
+    const cols = (db.pragma('table_info(fillups)') as { name: string }[]).map(c => c.name);
+    if (!cols.includes('is_partial')) {
+      db.exec('ALTER TABLE fillups ADD COLUMN is_partial INTEGER NOT NULL DEFAULT 0');
+    }
+  }
