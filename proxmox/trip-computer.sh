@@ -66,7 +66,7 @@ fi
 [[ -z "$DISK_STORAGE" ]] && DISK_STORAGE=$(pvesm status 2>/dev/null | awk 'NR>1 {print $1}' | tail -1)
 
 # Network bridge: prefer vmbr0, fall back to first available
-BRIDGE=$(ip link show 2>/dev/null | grep -oP '(?<=^\d+: )vmbr\w+' | head -1)
+BRIDGE=$(ip link show 2>/dev/null | awk -F': ' '/^[0-9]+: vmbr/{print $2}' | head -1)
 [[ -z "$BRIDGE" ]] && BRIDGE="vmbr0"
 
 REPO_URL="https://github.com/Grant-Visser/trip-computer.git"
@@ -123,7 +123,7 @@ if [[ "$MODE_SEL" == "2" ]]; then
   read -rp "  Disk GB [$DISK]: "        v; DISK="${v:-$DISK}"
   echo ""
   echo -e "  ${DIM}Available bridges:${CL}"
-  ip link show 2>/dev/null | grep -oP '(?<=^\d+: )vmbr\w+' | sed 's/^/    /' || true
+  ip link show 2>/dev/null | awk -F': ' '/^[0-9]+: vmbr/{print "    " $2}' || true
   read -rp "  Network bridge [$BRIDGE]: " v; BRIDGE="${v:-$BRIDGE}"
   echo ""
 fi
