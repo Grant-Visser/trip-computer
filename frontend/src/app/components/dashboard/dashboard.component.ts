@@ -232,8 +232,10 @@ export class DashboardComponent implements OnInit {
       return `${d.getDate()}/${d.getMonth() + 1}`;
     });
 
+    const isPartialFill = (value: unknown): boolean => value === 1 || value === true || value === '1';
+
     const efficiencyPoints = last10
-      .filter(f => Number(f.is_partial ?? 0) !== 1 && Number.isFinite(f.computed_efficiency ?? null))
+      .filter(f => !isPartialFill(f.is_partial) && Number.isFinite(f.computed_efficiency))
       .map(f => {
         const d = new Date(f.filled_at);
         return {

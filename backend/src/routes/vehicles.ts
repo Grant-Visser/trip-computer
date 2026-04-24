@@ -156,7 +156,13 @@ router.get('/:id/fillups', param('id').isInt(), (req: Request, res: Response) =>
     const vehicle = db.prepare('SELECT id FROM vehicles WHERE id = ?').get(req.params['id']);
     if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
-    const fillups = db.prepare('SELECT * FROM fillups WHERE vehicle_id = ? ORDER BY filled_at DESC').all(req.params['id']) as Fillup[];
+    const fillupsAsc = db.prepare('SELECT * FROM fillups WHERE vehicle_id = ? ORDER BY filled_at ASC').all(req.params['id']) as Fillup[];
+    const effMap = computeTankMethodEfficiency(fillupsAsc);
+    const fillups = [...fillupsAsc].reverse().map(fillup => ({
+      ...fillup,
+      computed_efficiency: effMap.get(fillup.id) ?? null,
+    }));
+
     res.json(fillups);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch fill-ups' });

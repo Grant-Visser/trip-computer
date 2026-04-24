@@ -51,7 +51,6 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
             <span>R{{ f.total_price | number:'1.2-2' }}</span>
             <span *ngIf="f.trip_km"> · {{ f.trip_km | number:'1.0-0' }} km</span>
             <span *ngIf="f.computed_efficiency !== null && f.computed_efficiency !== undefined"> · {{ f.computed_efficiency | number:'1.1-1' }} L/100km</span>
-            <span *ngIf="(f.computed_efficiency === null || f.computed_efficiency === undefined) && f.trip_km && !f.is_partial"> · {{ (f.litres_added / f.trip_km * 100) | number:'1.1-1' }} L/100km</span>
           </div>
           <div *ngIf="f.location_name" class="fillup-location">📍 {{ f.location_name }}</div>
           <div class="fillup-actions">
