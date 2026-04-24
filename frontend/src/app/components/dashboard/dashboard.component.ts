@@ -86,6 +86,41 @@ import type { Vehicle, Fillup, FillupStats } from '@trip-computer/shared';
         <div *ngIf="stats.recent_fillups.length === 0" style="color:#757575;text-align:center;padding:24px">
           No fill-ups yet. <a routerLink="/fillup/new">Add your first one!</a>
         </div>
+
+        <!-- Records Section -->
+        <div class="section-title" style="margin-top:24px">🏆 Records</div>
+        <div class="stats-grid records-grid">
+          <div class="stat-card">
+            <div class="label">Best Economy</div>
+            <div class="value">{{ stats.best_efficiency_l_per_100km !== null ? (stats.best_efficiency_l_per_100km | number:'1.1-1') : '—' }}</div>
+            <div class="unit">L/100km{{ stats.best_efficiency_date ? ' · ' + (stats.best_efficiency_date | date:'dd MMM yy') : '' }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">📏 Longest Trip</div>
+            <div class="value">{{ stats.best_trip_km !== null ? (stats.best_trip_km | number:'1.0-0') : '—' }}</div>
+            <div class="unit">km{{ stats.best_trip_date ? ' · ' + (stats.best_trip_date | date:'dd MMM yy') : '' }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">💚 Cheapest Litre</div>
+            <div class="value">{{ stats.lowest_price_per_litre !== null ? 'R' + (stats.lowest_price_per_litre | number:'1.2-2') : '—' }}</div>
+            <div class="unit">/L{{ stats.lowest_price_date ? ' · ' + (stats.lowest_price_date | date:'dd MMM yy') : '' }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">💸 Priciest Litre</div>
+            <div class="value">{{ stats.highest_price_per_litre !== null ? 'R' + (stats.highest_price_per_litre | number:'1.2-2') : '—' }}</div>
+            <div class="unit">/L{{ stats.highest_price_date ? ' · ' + (stats.highest_price_date | date:'dd MMM yy') : '' }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">💰 Cheapest Fill-up</div>
+            <div class="value">{{ stats.lowest_total_cost !== null ? 'R' + (stats.lowest_total_cost | number:'1.0-0') : '—' }}</div>
+            <div class="unit">total</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">💸 Priciest Fill-up</div>
+            <div class="value">{{ stats.highest_total_cost !== null ? 'R' + (stats.highest_total_cost | number:'1.0-0') : '—' }}</div>
+            <div class="unit">total</div>
+          </div>
+        </div>
       </ng-container>
 
       <div *ngIf="!selectedVehicleId && vehicles.length === 0" style="text-align:center;padding:40px;color:#9e9e9e">

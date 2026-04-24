@@ -36,6 +36,21 @@ export interface FillupStats {
   avg_price_per_litre: number;
   last_odometer: number;
   recent_fillups: Fillup[]; // last 5
+
+  // Records
+  best_efficiency_l_per_100km: number | null;
+  worst_efficiency_l_per_100km: number | null;
+  best_trip_km: number | null;
+  lowest_price_per_litre: number | null;
+  highest_price_per_litre: number | null;
+  lowest_total_cost: number | null;
+  highest_total_cost: number | null;
+
+  // Record context dates
+  best_efficiency_date: string | null;
+  best_trip_date: string | null;
+  lowest_price_date: string | null;
+  highest_price_date: string | null;
 }
 
 export interface CreateVehicleDto {

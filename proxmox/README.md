@@ -49,12 +49,12 @@ apt update && apt upgrade -y
 apt install -y curl git nginx
 ```
 
-### Install Node.js 20 LTS via NodeSource
+### Install Node.js 22 LTS via NodeSource
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt install -y nodejs
-node --version   # should be v20.x.x
+node --version   # should be v22.x.x
 npm --version
 ```
 
@@ -186,7 +186,7 @@ cloudflared tunnel route dns trip-computer fuel.yourdomain.com
 |-------|-----|
 | Service won't start | `journalctl -u trip-computer -n 50` |
 | Nginx 502 bad gateway | Check backend: `systemctl status trip-computer` |
-| Build fails | Ensure Node 20: `node --version` |
+| Build fails | Ensure Node 22: `node --version` |
 | SQLite permission error | `chown -R www-data:www-data /opt/trip-computer/backend/data` |
 | App loads but API 404 | Check nginx config `location /api/` block |
 

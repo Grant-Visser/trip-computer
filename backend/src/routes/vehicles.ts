@@ -200,6 +200,49 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
 
     const recent_fillups = [...fillups].reverse().slice(0, 5);
 
+    // Compute records
+    const effFillups = fillups.filter(f => f.trip_km && f.trip_km > 0);
+    let best_efficiency_l_per_100km: number | null = null;
+    let worst_efficiency_l_per_100km: number | null = null;
+    let best_efficiency_date: string | null = null;
+    if (effFillups.length > 0) {
+      const effWithVal = effFillups.map(f => ({ val: (f.litres_added / f.trip_km!) * 100, date: f.filled_at }));
+      const bestEff = effWithVal.reduce((a, b) => b.val < a.val ? b : a);
+      const worstEff = effWithVal.reduce((a, b) => b.val > a.val ? b : a);
+      best_efficiency_l_per_100km = bestEff.val;
+      best_efficiency_date = bestEff.date;
+      worst_efficiency_l_per_100km = worstEff.val;
+    }
+
+    let best_trip_km: number | null = null;
+    let best_trip_date: string | null = null;
+    const tripFillups = fillups.filter(f => f.trip_km && f.trip_km > 0);
+    if (tripFillups.length > 0) {
+      const best = tripFillups.reduce((a, b) => (b.trip_km! > a.trip_km! ? b : a));
+      best_trip_km = best.trip_km!;
+      best_trip_date = best.filled_at;
+    }
+
+    let lowest_price_per_litre: number | null = null;
+    let highest_price_per_litre: number | null = null;
+    let lowest_price_date: string | null = null;
+    let highest_price_date: string | null = null;
+    if (fillups.length > 0) {
+      const cheapest = fillups.reduce((a, b) => b.price_per_litre < a.price_per_litre ? b : a);
+      const priciest = fillups.reduce((a, b) => b.price_per_litre > a.price_per_litre ? b : a);
+      lowest_price_per_litre = cheapest.price_per_litre;
+      lowest_price_date = cheapest.filled_at;
+      highest_price_per_litre = priciest.price_per_litre;
+      highest_price_date = priciest.filled_at;
+    }
+
+    let lowest_total_cost: number | null = null;
+    let highest_total_cost: number | null = null;
+    if (fillups.length > 0) {
+      lowest_total_cost = fillups.reduce((a, b) => b.total_price < a.total_price ? b : a).total_price;
+      highest_total_cost = fillups.reduce((a, b) => b.total_price > a.total_price ? b : a).total_price;
+    }
+
     const stats: FillupStats = {
       vehicle_id: parseInt(req.params['id']),
       total_fillups,
@@ -211,6 +254,17 @@ router.get('/:id/stats', param('id').isInt(), (req: Request, res: Response) => {
       avg_price_per_litre,
       last_odometer,
       recent_fillups,
+      best_efficiency_l_per_100km,
+      worst_efficiency_l_per_100km,
+      best_trip_km,
+      lowest_price_per_litre,
+      highest_price_per_litre,
+      lowest_total_cost,
+      highest_total_cost,
+      best_efficiency_date,
+      best_trip_date,
+      lowest_price_date,
+      highest_price_date,
     };
 
     res.json(stats);
