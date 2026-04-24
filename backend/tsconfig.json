@@ -3,11 +3,8 @@
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],
+    "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@trip-computer/shared": ["../shared/src/index.ts"]
-    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
