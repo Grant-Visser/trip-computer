@@ -73,6 +73,7 @@ REPO_URL="https://github.com/Grant-Visser/trip-computer.git"
 INSTALL_URL="https://raw.githubusercontent.com/Grant-Visser/trip-computer/main/proxmox/trip-computer-install.sh"
 
 # ── Storage picker helper ────────────────────────────────────────────────────
+# All display output goes to stderr; only the chosen pool name goes to stdout
 pick_storage() {
   local prompt="$1" current="$2" filter="$3"
   local -a pools
@@ -84,18 +85,17 @@ pick_storage() {
   if [[ ${#pools[@]} -eq 0 ]]; then
     echo "$current"; return
   fi
-  echo -e "  ${BOLD}${prompt}${CL}"
+  echo -e "  ${BOLD}${prompt}${CL}" >&2
   for i in "${!pools[@]}"; do
     local mark=""
     [[ "${pools[$i]}" == "$current" ]] && mark=" ${GN}(suggested)${CL}"
-    echo -e "  ${GN}$((i+1)))${CL} ${pools[$i]}${mark}"
+    echo -e "  ${GN}$((i+1)))${CL} ${pools[$i]}${mark}" >&2
   done
-  # Find suggested index
   local default_idx=1
   for i in "${!pools[@]}"; do
     [[ "${pools[$i]}" == "$current" ]] && default_idx=$((i+1)) && break
   done
-  read -rp "  Select [$default_idx]: " sel
+  read -rp "  Select [$default_idx]: " sel </dev/tty
   sel="${sel:-$default_idx}"
   if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#pools[@]} )); then
     echo "${pools[$((sel-1))]}"
