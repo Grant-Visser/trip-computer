@@ -4,6 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { Vehicle, CreateVehicleDto, Fillup, CreateFillupDto, FillupStats, ImportFillupRow } from '@trip-computer/shared';
 
+type AppStateResponse = {
+  selected_vehicle_id: number | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private base = environment.apiUrl;
@@ -60,5 +64,14 @@ export class ApiService {
   // Import
   importFillups(vehicleId: number, rows: ImportFillupRow[]): Observable<{ imported: number }> {
     return this.http.post<{ imported: number }>(`${this.base}/api/vehicles/${vehicleId}/import`, { rows });
+  }
+
+  // App state
+  getAppState(): Observable<AppStateResponse> {
+    return this.http.get<AppStateResponse>(`${this.base}/api/state`);
+  }
+
+  setSelectedVehicleId(selectedVehicleId: number | null): Observable<AppStateResponse> {
+    return this.http.put<AppStateResponse>(`${this.base}/api/state`, { selected_vehicle_id: selectedVehicleId });
   }
 }

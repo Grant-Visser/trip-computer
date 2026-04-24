@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { initDb } from './db/database';
 import vehiclesRouter from './routes/vehicles';
 import fillupsRouter from './routes/fillups';
+import stateRouter from './routes/state';
 
 const app = express();
 const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 3000;
@@ -22,6 +23,7 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/fillups', fillupsRouter);
+app.use('/api/state', stateRouter);
 
 // 404 handler
 app.use((_req, res) => {

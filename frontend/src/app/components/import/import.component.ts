@@ -33,7 +33,7 @@ import type { Vehicle, ImportFillupRow } from '@trip-computer/shared';
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Vehicle</mat-label>
-        <mat-select [(ngModel)]="selectedVehicleId">
+        <mat-select [(ngModel)]="selectedVehicleId" (ngModelChange)="onVehicleChange($event)">
           <mat-option *ngFor="let v of vehicles" [value]="v.id">{{ v.name }}</mat-option>
         </mat-select>
       </mat-form-field>
@@ -137,11 +137,22 @@ export class ImportComponent implements OnInit {
   ngOnInit(): void {
     this.api.getVehicles().subscribe(v => {
       this.vehicles = v;
-      const storedId = this.vehicleState.getStoredVehicleId();
-      const found = storedId ? v.find(x => x.id === storedId) : null;
-      if (found) this.selectedVehicleId = found.id;
-      else if (v.length > 0) this.selectedVehicleId = v[0].id;
+      this.vehicleState.loadStoredVehicleId().subscribe(storedId => {
+        const found = storedId ? v.find(x => x.id === storedId) : null;
+        if (found) {
+          this.selectedVehicleId = found.id;
+          this.vehicleState.setSelectedVehicle(found);
+        } else if (v.length > 0) {
+          this.selectedVehicleId = v[0].id;
+          this.vehicleState.setSelectedVehicle(v[0]);
+        }
+      });
     });
+  }
+
+  onVehicleChange(vehicleId: number): void {
+    const selected = this.vehicles.find(v => v.id === vehicleId) ?? null;
+    this.vehicleState.setSelectedVehicle(selected);
   }
 
   onFileChange(event: Event): void {

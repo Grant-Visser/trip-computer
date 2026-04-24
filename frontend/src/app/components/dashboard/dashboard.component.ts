@@ -197,17 +197,18 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.api.getVehicles().subscribe(vehicles => {
       this.vehicles = vehicles;
-      const storedId = this.vehicleState.getStoredVehicleId();
-      const found = storedId ? vehicles.find(v => v.id === storedId) : null;
-      if (found) {
-        this.selectedVehicleId = found.id;
-        this.vehicleState.setSelectedVehicle(found);
-        this.loadStats(found.id);
-      } else if (vehicles.length > 0) {
-        this.selectedVehicleId = vehicles[0].id;
-        this.vehicleState.setSelectedVehicle(vehicles[0]);
-        this.loadStats(vehicles[0].id);
-      }
+      this.vehicleState.loadStoredVehicleId().subscribe(storedId => {
+        const found = storedId ? vehicles.find(v => v.id === storedId) : null;
+        if (found) {
+          this.selectedVehicleId = found.id;
+          this.vehicleState.setSelectedVehicle(found);
+          this.loadStats(found.id);
+        } else if (vehicles.length > 0) {
+          this.selectedVehicleId = vehicles[0].id;
+          this.vehicleState.setSelectedVehicle(vehicles[0]);
+          this.loadStats(vehicles[0].id);
+        }
+      });
     });
   }
 

@@ -134,9 +134,15 @@ export class FillupFormComponent implements OnInit {
 
     this.api.getVehicles().subscribe(v => {
       this.vehicles = v;
-      const storedId = this.vehicleState.getStoredVehicleId();
-      if (storedId) this.form.patchValue({ vehicle_id: storedId });
-      else if (v.length > 0) this.form.patchValue({ vehicle_id: v[0].id });
+      this.vehicleState.loadStoredVehicleId().subscribe(storedId => {
+        if (storedId && v.some(vehicle => vehicle.id === storedId)) {
+          this.form.patchValue({ vehicle_id: storedId });
+          this.vehicleState.setSelectedVehicle(v.find(vehicle => vehicle.id === storedId) ?? null);
+        } else if (v.length > 0) {
+          this.form.patchValue({ vehicle_id: v[0].id });
+          this.vehicleState.setSelectedVehicle(v[0]);
+        }
+      });
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -149,6 +155,10 @@ export class FillupFormComponent implements OnInit {
     }
 
     this.form.valueChanges.subscribe(() => this.updateEfficiencyPreview());
+    this.form.get('vehicle_id')?.valueChanges.subscribe((vehicleId: number | null) => {
+      const selected = this.vehicles.find(v => v.id === vehicleId) ?? null;
+      this.vehicleState.setSelectedVehicle(selected);
+    });
   }
 
   calcTotal(): void {
