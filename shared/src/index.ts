@@ -23,6 +23,7 @@ export interface Fillup {
   longitude?: number | null;
   notes?: string | null;
   is_partial?: number | null; // 0 = full tank, 1 = partial fill
+  missed_previous_fillup?: number | null; // 0 = normal, 1 = the fill-up before this one was missed (unreliable odometer/trip_km gap)
   created_at: string; // ISO8601 with timezone offset
   // Computed server-side in stats context only
   computed_efficiency?: number | null; // Tank-method L/100km
@@ -77,6 +78,7 @@ export interface CreateFillupDto {
   longitude?: number;
   notes?: string;
   is_partial?: boolean;
+  missed_previous_fillup?: boolean;
 }
 
 export interface ImportFillupRow {

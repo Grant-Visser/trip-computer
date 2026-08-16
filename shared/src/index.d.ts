@@ -22,6 +22,7 @@ export interface Fillup {
     longitude?: number | null;
     notes?: string | null;
     is_partial?: number | null;
+    missed_previous_fillup?: number | null;
     created_at: string;
     computed_efficiency?: number | null;
 }
@@ -68,6 +69,7 @@ export interface CreateFillupDto {
     longitude?: number;
     notes?: string;
     is_partial?: boolean;
+    missed_previous_fillup?: boolean;
 }
 export interface ImportFillupRow {
     date: string;

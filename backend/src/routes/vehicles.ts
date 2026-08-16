@@ -22,6 +22,13 @@ function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | nu
       continue;
     }
 
+    // If the previous fill-up was missed, the odometer/trip_km gap into `current`
+    // is inflated and unreliable — do not compute efficiency for this interval.
+    if (current.missed_previous_fillup) {
+      effMap.set(current.id, null);
+      continue;
+    }
+
     const fuelUsedLitres = prev.litres_added;
     let distanceKm: number | null = null;
     if (
@@ -181,6 +188,7 @@ router.post(
     body('trip_km').optional().isFloat({ min: 0 }),
     body('odometer').optional().isFloat({ min: 0 }),
     body('is_partial').optional().isBoolean(),
+    body('missed_previous_fillup').optional().isBoolean(),
   ],
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -194,13 +202,13 @@ router.post(
       const dto = req.body;
       const now = new Date().toISOString().replace('Z', '+00:00');
       const stmt = db.prepare(`
-        INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, location_name, latitude, longitude, notes, is_partial, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO fillups (vehicle_id, filled_at, litres_added, price_per_litre, total_price, trip_km, odometer, location_name, latitude, longitude, notes, is_partial, missed_previous_fillup, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         req.params['id'], dto.filled_at, dto.litres_added, dto.price_per_litre, dto.total_price,
         dto.trip_km ?? null, dto.odometer ?? null, dto.location_name ?? null,
-        dto.latitude ?? null, dto.longitude ?? null, dto.notes ?? null, dto.is_partial ? 1 : 0, now
+        dto.latitude ?? null, dto.longitude ?? null, dto.notes ?? null, dto.is_partial ? 1 : 0, dto.missed_previous_fillup ? 1 : 0, now
       );
       const fillup = db.prepare('SELECT * FROM fillups WHERE id = ?').get(result.lastInsertRowid) as Fillup;
       res.status(201).json(fillup);

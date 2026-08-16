@@ -55,8 +55,9 @@ function createTables(): void {
       location_name TEXT,
       latitude REAL,
       longitude REAL,
-        notes TEXT,
-        is_partial INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      is_partial INTEGER NOT NULL DEFAULT 0,
+      missed_previous_fillup INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
     );
 
@@ -73,5 +74,8 @@ function createTables(): void {
     const cols = (db.pragma('table_info(fillups)') as { name: string }[]).map(c => c.name);
     if (!cols.includes('is_partial')) {
       db.exec('ALTER TABLE fillups ADD COLUMN is_partial INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!cols.includes('missed_previous_fillup')) {
+      db.exec('ALTER TABLE fillups ADD COLUMN missed_previous_fillup INTEGER NOT NULL DEFAULT 0');
     }
   }

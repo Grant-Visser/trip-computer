@@ -31,6 +31,7 @@ router.put(
     body('trip_km').optional().isFloat({ min: 0 }),
     body('odometer').optional().isFloat({ min: 0 }),
     body('is_partial').optional().isBoolean(),
+    body('missed_previous_fillup').optional().isBoolean(),
   ],
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -44,7 +45,7 @@ router.put(
       const dto = req.body;
       const updated = { ...existing, ...dto };
       db.prepare(`
-        UPDATE fillups SET filled_at=?, litres_added=?, price_per_litre=?, total_price=?, trip_km=?, odometer=?, location_name=?, latitude=?, longitude=?, notes=?, is_partial=? WHERE id=?
+        UPDATE fillups SET filled_at=?, litres_added=?, price_per_litre=?, total_price=?, trip_km=?, odometer=?, location_name=?, latitude=?, longitude=?, notes=?, is_partial=?, missed_previous_fillup=? WHERE id=?
       `).run(
         updated.filled_at,
         updated.litres_added,
@@ -57,6 +58,7 @@ router.put(
         updated.longitude ?? null,
         updated.notes ?? null,
         updated.is_partial ? 1 : 0,
+        updated.missed_previous_fillup ? 1 : 0,
         req.params['id']
       );
 

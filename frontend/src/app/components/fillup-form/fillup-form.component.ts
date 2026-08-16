@@ -82,6 +82,10 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
           This is a partial refill
         </mat-checkbox>
 
+        <mat-checkbox formControlName="missed_previous_fillup" class="partial-checkbox">
+          Previous fill-up was missed (efficiency stats won't be calculated for this entry)
+        </mat-checkbox>
+
         <div class="form-actions">
           <button mat-stroked-button type="button" routerLink="/dashboard">Cancel</button>
           <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || saving">
@@ -140,6 +144,7 @@ export class FillupFormComponent implements OnInit {
       longitude: [null],
       notes: [''],
       is_partial: [false],
+      missed_previous_fillup: [false],
     });
 
     this.api.getVehicles().subscribe(v => {
@@ -258,6 +263,7 @@ export class FillupFormComponent implements OnInit {
       longitude: v.longitude || undefined,
       notes: v.notes || undefined,
       is_partial: !!v.is_partial,
+      missed_previous_fillup: !!v.missed_previous_fillup,
     };
 
     const obs$ = this.isEdit && this.editId
@@ -298,6 +304,7 @@ export class FillupFormComponent implements OnInit {
       longitude: f.longitude,
       notes: f.notes,
       is_partial: !!f.is_partial,
+      missed_previous_fillup: !!f.missed_previous_fillup,
     });
   }
 
