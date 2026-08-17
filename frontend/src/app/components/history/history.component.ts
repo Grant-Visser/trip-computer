@@ -45,6 +45,7 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
             <div class="fillup-litres">
               {{ f.litres_added | number:'1.2-2' }} L
               <span *ngIf="f.is_partial" class="partial-tag">PARTIAL</span>
+              <span *ngIf="f.missed_previous_fillup" class="missed-tag">MISSED PREV</span>
             </div>
           </div>
           <div class="fillup-secondary">
@@ -90,6 +91,16 @@ import type { Vehicle, Fillup } from '@trip-computer/shared';
       background: #3a2a1a;
       color: #ffcc80;
       border: 1px solid #6d4c41;
+      vertical-align: middle;
+    }
+    .missed-tag {
+      margin-left: 8px;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #3a1a1a;
+      color: #ef9a9a;
+      border: 1px solid #b71c1c;
       vertical-align: middle;
     }
     .fillup-secondary { font-size: 13px; color: #9e9e9e; margin-top: 4px; }
