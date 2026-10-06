@@ -5,47 +5,120 @@ import type { Vehicle, CreateVehicleDto, Fillup, FillupStats, ImportFillupRow } 
 
 const router = Router();
 
+/**
+ * Corrected tank-method efficiency per interval between consecutive fill-ups.
+ *
+ * Fuel burned between fill A (tank full after filling) and fill B equals the
+ * litres added at B (the fill that ENDS the interval), so an interval's
+ * efficiency = litres(B) / distance(A -> B). Pairing the previous fill's litres
+ * with the current interval's distance is only coincidentally right when cycle
+ * lengths are steady and produces wildly wrong values on short cycles.
+ *
+ * Intervals ending in a partial refill are unknowable (tank level after a
+ * partial is unknown). When a later full fill closes the cycle, efficiency is
+ * bridged cumulatively across the partials: (Σ litres since the last full
+ * fill) / (Σ distance since that full fill), attributed to the closing fill.
+ */
 function computeTankMethodEfficiency(fillups: Fillup[]): Map<number, number | null> {
   const effMap = new Map<number, number | null>();
-  for (let i = 0; i < fillups.length; i++) {
-    const current = fillups[i];
-    const prev = i > 0 ? fillups[i - 1] : null;
 
-    if (!prev) {
-      effMap.set(current.id, null);
-      continue;
-    }
+  // Last fill-up known to leave the tank full, plus litres/km accumulated since
+  // it (used to bridge across partial refills). `pendingIncomplete` marks a
+  // bridge whose distance cannot be fully accounted for.
+  let anchor: Fillup | null = null;
+  let pendingLitres = 0;
+  let pendingDistanceKm = 0;
+  let pendingIncomplete = false;
 
-    // Consistent policy: any interval involving a partial fill does not get an efficiency value.
-    if (current.is_partial || prev.is_partial) {
-      effMap.set(current.id, null);
-      continue;
-    }
-
-    // If the previous fill-up was missed, the odometer/trip_km gap into `current`
-    // is inflated and unreliable — do not compute efficiency for this interval.
-    if (current.missed_previous_fillup) {
-      effMap.set(current.id, null);
-      continue;
-    }
-
-    const fuelUsedLitres = prev.litres_added;
-    let distanceKm: number | null = null;
+  const intervalDistanceKm = (current: Fillup, prev: Fillup): number | null => {
     if (
       current.odometer != null &&
       prev.odometer != null &&
       current.odometer > prev.odometer
     ) {
-      distanceKm = current.odometer - prev.odometer;
-    } else if (current.trip_km != null && current.trip_km > 0) {
-      distanceKm = current.trip_km;
+      return current.odometer - prev.odometer;
+    }
+    if (current.trip_km != null && current.trip_km > 0) {
+      return current.trip_km;
+    }
+    return null;
+  };
+
+  for (let i = 0; i < fillups.length; i++) {
+    const current = fillups[i];
+    const prev = i > 0 ? fillups[i - 1] : null;
+    const distanceKm = prev ? intervalDistanceKm(current, prev) : null;
+
+    if (!prev) {
+      // First fill-up: no interval to measure yet. It can serve as the
+      // tank-full reference only if it left the tank full.
+      effMap.set(current.id, null);
+      if (!current.is_partial && !current.missed_previous_fillup) {
+        anchor = current;
+        pendingLitres = 0;
+        pendingDistanceKm = 0;
+        pendingIncomplete = false;
+      }
+      continue;
     }
 
-    if (fuelUsedLitres > 0 && distanceKm != null && distanceKm > 0) {
-      effMap.set(current.id, (fuelUsedLitres / distanceKm) * 100);
+    // If the previous fill-up was missed, the odometer/trip_km gap into `current`
+    // is inflated and unreliable — do not compute efficiency for this interval,
+    // and no partial bridge may cross the gap.
+    if (current.missed_previous_fillup) {
+      effMap.set(current.id, null);
+      anchor = current.is_partial ? null : current;
+      pendingLitres = 0;
+      pendingDistanceKm = 0;
+      pendingIncomplete = false;
+      continue;
+    }
+
+    if (current.is_partial) {
+      // Tank level after a partial refill is unknown, so the interval ending
+      // here is unknowable — but its fuel/distance accumulates toward the
+      // bridge that the next full fill will close.
+      effMap.set(current.id, null);
+      if (anchor) {
+        pendingLitres += current.litres_added;
+        if (distanceKm != null) {
+          pendingDistanceKm += distanceKm;
+        } else {
+          pendingIncomplete = true;
+        }
+      }
+      continue;
+    }
+
+    // `current` is a full fill.
+    if (prev.is_partial) {
+      // Close the bridge: cumulative full-to-full across the partial(s).
+      if (
+        anchor &&
+        !pendingIncomplete &&
+        distanceKm != null &&
+        pendingDistanceKm + distanceKm > 0 &&
+        pendingLitres + current.litres_added > 0
+      ) {
+        effMap.set(
+          current.id,
+          ((pendingLitres + current.litres_added) / (pendingDistanceKm + distanceKm)) * 100
+        );
+      } else {
+        effMap.set(current.id, null);
+      }
+    } else if (distanceKm != null && distanceKm > 0 && current.litres_added > 0) {
+      // Normal interval between consecutive full fills: fuel burned = litres
+      // added at the fill that ends the interval.
+      effMap.set(current.id, (current.litres_added / distanceKm) * 100);
     } else {
       effMap.set(current.id, null);
     }
+
+    anchor = current;
+    pendingLitres = 0;
+    pendingDistanceKm = 0;
+    pendingIncomplete = false;
   }
 
   return effMap;

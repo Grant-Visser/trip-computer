@@ -213,7 +213,13 @@ export class FillupFormComponent implements OnInit {
   }
 
   updateEfficiencyPreview(): void {
-    const { litres_added, trip_km } = this.form.value;
+    const { litres_added, trip_km, is_partial } = this.form.value;
+    // A partial refill leaves the tank below full, so litres/trip km is not a
+    // meaningful estimate — hide it rather than show a misleading number.
+    if (is_partial) {
+      this.efficiencyPreview = null;
+      return;
+    }
     if (litres_added > 0 && trip_km > 0) {
       this.efficiencyPreview = (litres_added / trip_km) * 100;
     } else {
