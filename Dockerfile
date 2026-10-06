@@ -1,5 +1,5 @@
 # Stage 1 — Build frontend
-FROM node:22-trixie AS frontend-builder
+FROM node:24-trixie AS frontend-builder
 WORKDIR /app
 # Copy root workspace manifest + lock file so npm ci works
 COPY package.json package-lock.json ./
@@ -14,7 +14,7 @@ WORKDIR /app/frontend
 RUN npm run build
 
 # Stage 2 — Build backend
-FROM node:22-trixie AS backend-builder
+FROM node:24-trixie AS backend-builder
 WORKDIR /app
 # Copy root workspace manifest + lock file so npm ci works
 COPY package.json package-lock.json ./
@@ -29,7 +29,7 @@ WORKDIR /app/backend
 RUN npm run build
 
 # Stage 3 — Production image
-FROM node:22-trixie-slim AS production
+FROM node:24-trixie-slim AS production
 
 # Install nginx and supervisor
 RUN apt-get update && apt-get install -y nginx supervisor && rm -rf /var/lib/apt/lists/*

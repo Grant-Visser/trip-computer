@@ -13,7 +13,7 @@ msg_ok()    { echo -e "${TAB}${CM} ${1}"; }
 msg_error() { echo -e "${TAB}${CROSS} ${RD}${1}${CL}"; exit 1; }
 
 REPO_URL="https://github.com/Grant-Visser/trip-computer.git"
-NODE_MAJOR=22
+NODE_MAJOR=24
 
 # ── System update ─────────────────────────────────────────────────────────────
 msg_info "Updating system"
@@ -31,7 +31,7 @@ apt-get install -y -qq \
   gnupg
 msg_ok "Dependencies installed"
 
-# ── Node.js 22 LTS via NodeSource ─────────────────────────────────────────────
+# ── Node.js 24 LTS via NodeSource ─────────────────────────────────────────────
 msg_info "Installing Node.js $NODE_MAJOR LTS"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - >/dev/null 2>&1
 apt-get install -y -qq nodejs

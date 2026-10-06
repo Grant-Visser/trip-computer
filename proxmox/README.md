@@ -12,7 +12,7 @@ The script will:
 - Ask for **Default** or **Advanced** setup
 - Prompt you to select template and disk storage from your available pools
 - Create a **Debian 13 LXC** (1 core, 512MB RAM, 4GB disk)
-- Install Node.js 22 LTS, clone the repo, build frontend + backend
+- Install Node.js 24 LTS, clone the repo, build frontend + backend
 - Configure Nginx (port 80) and a systemd service
 - Print the URL when done
 
@@ -39,7 +39,7 @@ Or SSH into the container and run the same command directly.
 |-------|-----|
 | Service won't start | `journalctl -u trip-computer -n 50` |
 | Nginx 502 bad gateway | `systemctl status trip-computer` |
-| Build fails | `node --version` — should be v22.x |
+| Build fails | `node --version` — should be v24.x |
 | API 404 | Check `/etc/nginx/sites-available/trip-computer` — `location /api/` block |
 
 ---

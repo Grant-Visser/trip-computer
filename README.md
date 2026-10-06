@@ -42,7 +42,7 @@ git pull && docker compose up -d --build
 
 ## Development
 
-**Prerequisites:** Node.js 22 LTS
+**Prerequisites:** Node.js 24 LTS
 
 ```bash
 # Install all workspace deps
